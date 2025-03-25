@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación del Algoritmo del Banquero</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid black;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        input {
+            width: 50px;
+            text-align: center;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #resultado{
+            background-color: #c4e78c;
+            margin-top: 20px;
+            text-align: left;
+            padding: 15px;
+            border-radius: 5px;
+
+
+        }
+        #detallePasoAPaso {
+            margin-top: 20px;
+            text-align: left;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .paso {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Simulación del Algoritmo del Banquero</h2>
+
+        <label for="procesos">Número de procesos:</label>
+        <input type="number" id="procesos" value="5" min="1">
+        <label for="recursos">Número de recursos:</label>
+        <input type="number" id="recursos" value="4" min="1">
+        <button onclick="generarTablas()">Generar Tablas</button>
+
+        <div id="tablas"></div>
+
+        <button onclick="ejecutarBanquero()">Ejecutar Algoritmo</button>
+        <div id="resultado"></div>
+        <div id="detallePasoAPaso"></div>
+    </div>
+
+    <script>
+function ejecutarBanquero() {
+    let p = parseInt(document.getElementById("procesos").value);
+    let r = parseInt(document.getElementById("recursos").value);
+    let asignados = [];
+    let necesarios = [];
+    let existentes = [];
+    let disponibles = [];
+    let pasos = [];
+
+    for (let i = 1; i <= p; i++) {
+        asignados[i] = [];
+        necesarios[i] = [];
+        for (let j = 1; j <= r; j++) {
+            asignados[i][j] = parseInt(document.getElementById(`asignados_${i}_${j}`).value);
+            necesarios[i][j] = parseInt(document.getElementById(`necesarios_${i}_${j}`).value);
+        }
+    }
+
+    for (let j = 1; j <= r; j++) {
+        existentes[j] = parseInt(document.getElementById(`existentes_${j}`).value);
+    }
+
+    for (let j = 1; j <= r; j++) {
+        let sumaAsignados = 0;
+        for (let i = 1; i <= p; i++) {
+            sumaAsignados += asignados[i][j];
+        }
+        disponibles[j] = existentes[j] - sumaAsignados;
+    }
+
+    let secuencia = [];
+    let procesosTerminados = new Array(p + 1).fill(false);
+    let terminado = 0;
+
+    pasos.push({
+        tipo: 'inicial',
+        disponibles: [...disponibles],
+        matrizC: JSON.parse(JSON.stringify(asignados)),
+        matrizR: JSON.parse(JSON.stringify(necesarios)),
+        mensaje: `Estado inicial: <i style="color:#A349A4">A = [${disponibles.slice(1).join(', ')}]</i>`
+    });
+
+    while (terminado < p) {
+        let progreso = false;
+        let procesosViables = [];
+
+        for (let i = 1; i <= p; i++) {
+            if (!procesosTerminados[i]) {
+                let puedeEjecutar = true;
+                for (let j = 1; j <= r; j++) {
+                    if (necesarios[i][j] > disponibles[j]) {
+                        puedeEjecutar = false;
+                    }
+                }
+
+                if (puedeEjecutar) {
+                    procesosViables.push(i);
+                }
+            }
+        }
+
+        if (procesosViables.length > 0) {
+            let procesoSeleccionado = procesosViables[0];
+
+            pasos.push({
+                tipo: 'ejecucion',
+                proceso: `P${procesoSeleccionado}`,
+                disponibles: [...disponibles],  // Solo se guarda el valor actual
+                matrizC: JSON.parse(JSON.stringify(asignados)),
+                matrizR: JSON.parse(JSON.stringify(necesarios)),
+                mensaje: `Ejecutando proceso <strong>P${procesoSeleccionado}</strong>`,
+            });
+
+            for (let j = 1; j <= r; j++) {
+                disponibles[j] += asignados[procesoSeleccionado][j];
+                asignados[procesoSeleccionado][j] = 0; 
+                necesarios[procesoSeleccionado][j] = 0; 
+            }
+
+            pasos.push({
+                tipo: 'liberacion',
+                proceso: `P${procesoSeleccionado}`,
+                disponibles: [...disponibles],  // Guardamos el nuevo valor de disponibles
+                matrizC: JSON.parse(JSON.stringify(asignados)),
+                matrizR: JSON.parse(JSON.stringify(necesarios)),
+                mensaje: `<strong>P${procesoSeleccionado}</strong> ha terminado y liberó sus recursos.`,
+            });
+
+            secuencia.push(`P${procesoSeleccionado}`);
+            procesosTerminados[procesoSeleccionado] = true;
+            terminado++;
+            progreso = true;
+        }
+
+        if (!progreso) {
+            document.getElementById("resultado").innerHTML = "No existe una secuencia segura.";
+            return;
+        }
+    }
+
+    document.getElementById("resultado").innerHTML = `Secuencia segura: <i>${secuencia.join(" → ")}</i>`;
+
+    let detalleHTML = "<h3>Detalle Paso a Paso:</h3>";
+
+    pasos.forEach((paso, index) => {
+        detalleHTML += `<p><strong>Paso ${index + 1}:</strong> ${paso.mensaje}</p>`;
+
+        if (paso.disponibles) {
+            detalleHTML += `<p style="margin-left:40px;">Recursos disponibles: <i style="color:#A349A4">A = [${paso.disponibles.slice(1).join(', ')}]</i></p>`;
+        }
+
+        detalleHTML += `
+            <div style="display:flex; gap:30px; margin-left:40px;">
+                <div>
+                    <h4 style="text-align: center;">Matriz de Asignados (C)</h4>
+                    ${generarTablaMatriz(paso.matrizC, paso.proceso)}
+                </div>
+                <div>
+                    <h4 style="text-align: center;">Matriz de Necesarios (R)</h4>
+                    ${generarTablaMatriz(paso.matrizR, paso.proceso)}
+                </div>
+            </div>
+        `;
+
+        detalleHTML += '<br><hr style="border-color:red;"><br>'
+    });
+
+    document.getElementById("detallePasoAPaso").innerHTML = detalleHTML;
+}
+
+function generarTablaMatriz(matriz, procesoLiberado) {
+    let tabla = "<table border='1' style='border-collapse: collapse;'>";
+    let p = matriz.length - 1;
+    let r = matriz[1].length - 1;
+
+    tabla += "<tr><th>Proceso</th>";
+    for (let j = 1; j <= r; j++) {
+        tabla += `<th>R${j}</th>`;
+    }
+    tabla += "</tr>";
+
+    for (let i = 1; i <= p; i++) {
+        let colorFondo = (procesoLiberado && `P${i}` === procesoLiberado) ? "background-color:#d3d3d3;" : "";
+        tabla += `<tr style="${colorFondo}"><td>P${i}</td>`;
+        for (let j = 1; j <= r; j++) {
+            tabla += `<td>${matriz[i][j]}</td>`;
+        }
+        tabla += "</tr>";
+    }
+    tabla += "</table>";
+
+    return tabla;
+}
+
+
+
+
+
+
+
+        // Función utilizada en la parte inicial del algoritmo, en donde en base a la cantidad de procesos y recursos indicada por el usuario, se ejecute. 
+        function generarTablas() {
+            let p = parseInt(document.getElementById("procesos").value);
+            let r = parseInt(document.getElementById("recursos").value);
+            let html = "";
+
+            // Tabla de asignados
+            html += "<h3 style='color:#0056B3'>Matriz de Recursos Asignados (C)</h3><table>";
+            for (let i = 0; i <= p; i++) {
+                html += "<tr>";
+                for (let j = 0; j <= r; j++) {
+                    if (i === 0 && j === 0) html += "<th>P\\R</th>";
+                    else if (i === 0) html += `<th>R${j}</th>`;
+                    else if (j === 0) html += `<th>P${i}</th>`;
+                    else html += `<td><input type='number' id='asignados_${i}_${j}' value='0' min='0'></td>`;
+                }
+                html += "</tr>";
+            }
+            html += "</table>";
+
+            // Tabla de necesidades
+            html += "<h3 style='color:#0056B3'>Matriz de Recursos Necesarios (R)</h3><table>";
+            for (let i = 0; i <= p; i++) {
+                html += "<tr>";
+                for (let j = 0; j <= r; j++) {
+                    if (i === 0 && j === 0) html += "<th>P\\R</th>";
+                    else if (i === 0) html += `<th>R${j}</th>`;
+                    else if (j === 0) html += `<th>P${i}</th>`;
+                    else html += `<td><input type='number' id='necesarios_${i}_${j}' value='0' min='0'></td>`;
+                }
+                html += "</tr>";
+            }
+            html += "</table>";
+
+            // Vector de recursos existentes
+            html += "<h3>Recursos Existentes</h3><table><tr>";
+            for (let j = 0; j <= r; j++) {
+                if (j === 0) html += "<th>R</th>";
+                else html += `<td><input type='number' id='existentes_${j}' value='0' min='0'></td>`;
+            }
+            html += "</tr></table>";
+
+            document.getElementById("tablas").innerHTML = html;
+        }
+
+        // Llamar a generarTablas al cargar la página
+        generarTablas();
+    </script>
+
+</body>
+
+</html>
