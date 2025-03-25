@@ -125,102 +125,104 @@
         console.log(`Disponibles: A\n\n${disponibles}\n\n`);
         
         // Paso inicial
-        pasos.push({
-            tipo: 'inicial',
-            disponibles: [...disponibles],
-            mensaje: `Recursos disponibles iniciales: <i style="color:#A349A4">A = [${disponibles.slice(1).join(', ')}]</i>`
-        });
-        
-        let secuencia = [];
-        let procesosTerminados = new Array(p + 1).fill(false);
-        let terminado = 0;
-        
-        while (terminado < p) {
-            let progreso = false;
-            let procesosViables = [];
-        
-            for (let i = 1; i <= p; i++) {
-                if (!procesosTerminados[i]) {
-                    let puedeEjecutar = true;
-                    let comparacion = `<strong>P${i}</strong> puede ejecutarse porque <i style="color:#CD0000">(`;
-        
-                    for (let j = 1; j <= r; j++) {
-                        comparacion += `${necesarios[i][j]}${j < r ? ', ' : ''}`;
-                        if (necesarios[i][j] > disponibles[j]) {
-                            puedeEjecutar = false;
-                        }
-                    }
-        
-                    comparacion += `)</i> ≤ <i style="color:#A349A4">(`;
-                    comparacion += disponibles.slice(1).join(', ');
-                    comparacion += `)</i>`;
-        
-                    if (puedeEjecutar) {
-                        procesosViables.push(`P${i}`);
-                        pasos.push({
-                            tipo: 'verificacion',
-                            proceso: `P${i}`,
-                            comparacion,
-                            mensaje: comparacion
-                        });
-                        
-                        // Crear paso de ejecución
-                        pasos.push({
-                            tipo: 'ejecucion',
-                            proceso: `P${i}`,
-                            disponiblesAntes: [...disponibles],
-                            asignados: asignados[i].slice(1),
-                            mensaje: `El proceso P${i} puede ejecutarse`
-                        });
-        
-                        // Liberar recursos
-                        for (let j = 1; j <= r; j++) {
-                            disponibles[j] += asignados[i][j];
-                        }
-        
-                        // Crear paso después de liberar recursos
-                        pasos.push({
-                            tipo: 'liberacion',
-                            proceso: `P${i}`,
-                            disponiblesDespues: [...disponibles],
-                            mensaje: `Recursos liberados por P${i}`
-                        });
-        
-                        secuencia.push(`P${i}`);
-                        procesosTerminados[i] = true;
-                        terminado++;
-                        progreso = true;
-                    }
+pasos.push({
+    tipo: 'inicial',
+    disponibles: [...disponibles],
+    mensaje: `Recursos disponibles iniciales: <i style="color:#A349A4">A = [${disponibles.slice(1).join(', ')}]</i>`
+});
+
+let secuencia = [];
+let procesosTerminados = new Array(p + 1).fill(false);
+let terminado = 0;
+
+while (terminado < p) {
+    let progreso = false;
+    let procesosViables = [];
+
+    for (let i = 1; i <= p; i++) {
+        if (!procesosTerminados[i]) {
+            let puedeEjecutar = true;
+            let comparacion = `<strong>P${i}</strong> puede ejecutarse porque <i style="color:#CD0000">(`;
+
+            for (let j = 1; j <= r; j++) {
+                comparacion += `${necesarios[i][j]}${j < r ? ', ' : ''}`;
+                if (necesarios[i][j] > disponibles[j]) {
+                    puedeEjecutar = false;
                 }
             }
-        
-            if (!progreso) {
-                document.getElementById("resultado").innerHTML = "⚠ No existe una secuencia segura.";
-                return;
+
+            comparacion += `)</i> ≤ <i style="color:#A349A4">(`;
+            comparacion += disponibles.slice(1).join(', ');
+            comparacion += `)</i>`;
+
+            if (puedeEjecutar) {
+                procesosViables.push({ index: i, nombre: `P${i}`, comparacion });
             }
         }
-        
-        document.getElementById("resultado").innerHTML = `✅ Secuencia segura: ${secuencia.join(" → ")}`;
-        
-        // Mostrar detalle paso a paso
-        let detalleHTML = "<h3>Detalle Paso a Paso:</h3>";
-        
-        pasos.forEach((paso, index) => {
-            detalleHTML += `<p><strong>Paso ${index + 1}:</strong> ${paso.mensaje}</p>`;
-        
-            if (paso.tipo === 'verificacion') {
-                detalleHTML += `<p style="margin-left:40px;"><strong>Comparación</strong>: ${paso.comparacion}</p>`;
-            } else if (paso.tipo === 'ejecucion') {
-                detalleHTML += `<p style="margin-left:40px">Proceso ejecutado: ${paso.proceso}</p>`;
-                detalleHTML += `<p style="margin-left:40px; ">Recursos asignados: <i style="color:#0056B3">C_${paso.proceso} = [${paso.asignados.join(', ')}]</i></p>`;
-                detalleHTML += `<p style="margin-left:40px">Recursos disponibles antes: <i style="color:#A349A4">A = [${paso.disponiblesAntes.slice(1).join(', ')}]</i></p>`;
-            } else if (paso.tipo === 'liberacion') {
-                detalleHTML += `<p style="margin-left:40px">Recursos disponibles después de liberar: <i style="color:#A349A4">A = [${paso.disponiblesDespues.slice(1).join(', ')}] </i></p>`;
-            }
+    }
+
+    if (procesosViables.length > 0) {
+        procesosViables.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        let procesoSeleccionado = procesosViables[0];
+
+        pasos.push({
+            tipo: 'verificacion',
+            proceso: procesoSeleccionado.nombre,
+            comparacion: procesoSeleccionado.comparacion,
+            mensaje: procesoSeleccionado.comparacion
         });
-        
-        document.getElementById("detallePasoAPaso").innerHTML = detalleHTML;
-        
+
+        pasos.push({
+            tipo: 'ejecucion',
+            proceso: procesoSeleccionado.nombre,
+            disponiblesAntes: [...disponibles],
+            asignados: asignados[procesoSeleccionado.index].slice(1),
+            mensaje: `El proceso ${procesoSeleccionado.nombre} puede ejecutarse`
+        });
+
+        for (let j = 1; j <= r; j++) {
+            disponibles[j] += asignados[procesoSeleccionado.index][j];
+        }
+
+        pasos.push({
+            tipo: 'liberacion',
+            proceso: procesoSeleccionado.nombre,
+            disponiblesDespues: [...disponibles],
+            mensaje: `Recursos liberados por ${procesoSeleccionado.nombre}`
+        });
+
+        secuencia.push(procesoSeleccionado.nombre);
+        procesosTerminados[procesoSeleccionado.index] = true;
+        terminado++;
+        progreso = true;
+    }
+
+    if (!progreso) {
+        document.getElementById("resultado").innerHTML = "⚠ No existe una secuencia segura.";
+        return;
+    }
+}
+
+document.getElementById("resultado").innerHTML = `✅ Secuencia segura: ${secuencia.join(" → ")}`;
+
+let detalleHTML = "<h3>Detalle Paso a Paso:</h3>";
+
+pasos.forEach((paso, index) => {
+    detalleHTML += `<p><strong>Paso ${index + 1}:</strong> ${paso.mensaje}</p>`;
+
+    if (paso.tipo === 'verificacion') {
+        detalleHTML += `<p style="margin-left:40px;"><strong>Comparación</strong>: ${paso.comparacion}</p>`;
+    } else if (paso.tipo === 'ejecucion') {
+        detalleHTML += `<p style="margin-left:40px">Proceso ejecutado: ${paso.proceso}</p>`;
+        detalleHTML += `<p style="margin-left:40px;">Recursos asignados: <i style="color:#0056B3">C_${paso.proceso} = [${paso.asignados.join(', ')}]</i></p>`;
+        detalleHTML += `<p style="margin-left:40px">Recursos disponibles antes: <i style="color:#A349A4">A = [${paso.disponiblesAntes.slice(1).join(', ')}]</i></p>`;
+    } else if (paso.tipo === 'liberacion') {
+        detalleHTML += `<p style="margin-left:40px">Recursos disponibles después de liberar: <i style="color:#A349A4">A = [${paso.disponiblesDespues.slice(1).join(', ')}] </i></p>`;
+    }
+});
+
+document.getElementById("detallePasoAPaso").innerHTML = detalleHTML;
+
     }
 
 
