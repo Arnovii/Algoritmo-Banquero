@@ -298,7 +298,7 @@ function generarTablaMatriz(matriz, procesoLiberado) {
             html += "</table>";
 
             // Vector de recursos existentes
-            html += "<h3>Recursos Existentes</h3><table><tr>";
+            html += "<h3>Recursos Existentes (E)</h3><table><tr>";
             for (let j = 0; j <= r; j++) {
                 if (j === 0) html += "<th>R</th>";
                 else html += `<td><input type='number' id='existentes_${j}' value='0' min='0'></td>`;
@@ -306,6 +306,10 @@ function generarTablaMatriz(matriz, procesoLiberado) {
             html += "</tr></table>";
 
             document.getElementById("tablas").innerHTML = html;
+
+            //Borrar el resultado anterior 
+            document.getElementById("resultado").innerHTML = "";
+            document.getElementById("detallePasoAPaso").innerHTML = "";
         }
 
         // Llamar a generarTablas al cargar la página
